@@ -147,7 +147,8 @@ void BlueprintParse::StartParse()
 	TArray< FAssetData > AssetList;
 
 	FARFilter BPFilter;
-	BPFilter.PackagePaths.Add(FName(TEXT("/Game")));
+	
+	BPFilter.PackagePaths.Add(FName(TEXT("/Game/Forerunner")));
 	BPFilter.bRecursivePaths = true;
 	BPFilter.bRecursiveClasses = true;
 	BPFilter.ClassNames.Add(FName(TEXT("Blueprint")));
@@ -184,7 +185,7 @@ void BlueprintParse::StartParse()
 
 		const char* k = j.dump(4, ' ').c_str();
 	
-		FString TextPath = IPluginManager::Get().FindPlugin("Puerts")->GetBaseDir() + TEXT("Data/") + Asset.AssetClass.ToString() + TEXT(".json");
+		FString TextPath = IPluginManager::Get().FindPlugin("Bluescript")->GetBaseDir() + TEXT("/Data/") + Asset.AssetName.ToString() + TEXT(".json");
 		TextPath = FPaths::ConvertRelativePathToFull(TextPath);
 		FFileHelper::SaveStringToFile(FString(k), *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
 	
