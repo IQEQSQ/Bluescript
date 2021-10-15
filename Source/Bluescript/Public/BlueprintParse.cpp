@@ -4,8 +4,9 @@
 
 #include "K2Node_MacroInstance.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Misc/FileHelper.h"
-
+#include "Interfaces/IPluginManager.h"
 
 using namespace std;
 
@@ -183,7 +184,7 @@ void BlueprintParse::StartParse()
 
 		const char* k = j.dump(4, ' ').c_str();
 	
-		FString TextPath = FPaths::ProjectDir() + TEXT("Data/bluescript.json");
+		FString TextPath = IPluginManager::Get().FindPlugin("Puerts")->GetBaseDir() + TEXT("Data/") + Asset.AssetClass.ToString() + TEXT(".json");
 		TextPath = FPaths::ConvertRelativePathToFull(TextPath);
 		FFileHelper::SaveStringToFile(FString(k), *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
 	

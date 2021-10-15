@@ -25,7 +25,7 @@ public class Bluescript : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "AssetRegistry"
+				"Core", "AssetRegistry", "Projects",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
