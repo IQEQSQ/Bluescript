@@ -25,6 +25,18 @@ using namespace configor;
 const bool IsContainNoLinkedPins = false;
 // #define IS_CONTAIN_NO_LINKED_PINS
 
+FString GetNodeTitle(UEdGraphNode* Node)
+{
+	if (!Node)
+	{
+		return TEXT("");
+	}
+	
+	const FText Title = Node->GetNodeTitle(ENodeTitleType::FullTitle);
+	FString NodeTitle = Title.ToString();
+	return NodeTitle;
+}
+
 FString GetNodeType(UEdGraphNode* Node)
 {
 	if (!Node)
@@ -57,9 +69,7 @@ FString GetNodeType(UEdGraphNode* Node)
 		SourceValue = K2Node_FunctionEntry->GetName();
 	}
 	
-	const FText Title = Node->GetNodeTitle(ENodeTitleType::FullTitle);
-	FString NodeType = Title.ToString();
-	return NodeType;
+	return SourceValue;
 }
 
 FString GetNodeName(UEdGraphNode* Node)
@@ -71,6 +81,17 @@ FString GetNodeName(UEdGraphNode* Node)
 	
 	FString NodeName = Node->GetName();
 	return NodeName;
+}
+
+FString GetNodeClass(UEdGraphNode* Node)
+{
+	if (!Node)
+	{
+		return TEXT("");
+	}
+	
+	FString NodeClass = Node->GetClass()->GetName();
+	return NodeClass;
 }
 
 FString GetPinName(UEdGraphPin* Pin)
@@ -97,23 +118,26 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 			for (UEdGraphPin* Pin : Pins)
 			{
 				json jsonLinkedToArray = json::array({});
-				for (UEdGraphPin* PinLInkedToNode : Pin->LinkedTo)
+				for (UEdGraphPin* PinLinked : Pin->LinkedTo)
 				{
 					// FString PinNameF = GetPinName(PinLInkedToNode);
 					
 					// const char* PinName = FStringTOChar(Pin->PinName.ToString());
-					UEdGraphNode* OwingNode = PinLInkedToNode->GetOwningNode();
+					UEdGraphNode* OwingNode = PinLinked->GetOwningNode();
 					FString PinNodeNameF = GetNodeName(OwingNode);
-					FString PinNodeTypeF = GetNodeType(OwingNode);
-					const char* PinOwningNodeType = TCHAR_TO_ANSI(*PinNodeTypeF);
+					FString PinNodeTitleF = GetNodeTitle(OwingNode);
+					const char* PinOwningNodeTitle = TCHAR_TO_ANSI(*PinNodeTitleF);
 					const char* PinOwningNodeName = TCHAR_TO_ANSI(*PinNodeNameF);
+					FString PinOwningNodeClassF = GetNodeClass(Node);
+					const char* PinOwningNodeClass = TCHAR_TO_ANSI(*PinOwningNodeClassF);
 					// const char* PinNode = FStringTOChar(PinNodeF);
 					// std::string s = std::string();
-					const char* PinName = TCHAR_TO_ANSI(*PinLInkedToNode->PinName.ToString());
+					FString PinLinkedNameF = GetPinName(PinLinked);
+					const char* PinName = TCHAR_TO_ANSI(*PinLinkedNameF);
 					
 					if(OwingNode)
 					{
-						jsonLinkedToArray.push_back({{"PinName", PinName}, {"PinOwningNodeName",  PinOwningNodeName}, {"PinOwningNodeType", PinOwningNodeType}});	//
+						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}, {"LinkedPin_OwningNodeName",  PinOwningNodeName}, {"LinkedPin_OwningNodeTitle", PinOwningNodeTitle}, {"LinkedPin_OwningNodeClass",  PinOwningNodeClass}});	//
 					}
 					
 					// const char* k = jsonLinkedToArray.dump(4, ' ').c_str();
@@ -121,10 +145,10 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
       //               	TextPath = FPaths::ConvertRelativePathToFull(TextPath);
       //               		FFileHelper::SaveStringToFile(FString(k), *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
 				}
-				// FString PinName2F = GetPinName(Pin);
+				FString PinName2F = GetPinName(Pin);
 				// const char* PinName2 = FStringTOChar(Pin->PinName.ToString());
 				// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(Pin->PinName.ToString())));
-				const char* PinName2 = TCHAR_TO_ANSI(*Pin->PinName.ToString());
+				const char* PinName2 = TCHAR_TO_ANSI(*PinName2F);
 				if(jsonLinkedToArray.size() == 0){
 // #ifdef IS_CONTAIN_NO_LINKED_PINS
 					if(IsContainNoLinkedPins)
@@ -137,26 +161,31 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 				
 				}else
 				{
-					pinArr.push_back({{"Name", PinName2}, {"LinkedTo", jsonLinkedToArray}});	//	
+					pinArr.push_back({{"PinName", PinName2}, {"PinLinkedTo", jsonLinkedToArray}});	//	
 				}
 				
 			}
 
 			FString NodeNameF = GetNodeName(Node);
-			FString NodeTypeF = GetNodeType(Node);
 			const char* NodeName = TCHAR_TO_ANSI(*NodeNameF);
-			const char* NodeType = TCHAR_TO_ANSI(*NodeTypeF);
+			
+			FString NodeTitleF = GetNodeTitle(Node);
+			const char* NodeTitle = TCHAR_TO_ANSI(*NodeTitleF);
+			
+			FString NodeClassF = GetNodeClass(Node);
+			const char* NodeClass = TCHAR_TO_ANSI(*NodeClassF);
+			
 			if(pinArr.size() == 0){
-				arr.push_back({{"Name", NodeName}, {"Type", NodeType}});
+				arr.push_back({{"NodeName", NodeName}, {"NodeTitle", NodeTitle}, {"NodeClass", NodeClass}});
 			}else
 			{
-				arr.push_back({{"Name", NodeName}, {"Type", NodeType},{"Pins", pinArr}});	
+				arr.push_back({{"NodeName", NodeName}, {"NodeTitle", NodeTitle}, {"NodeClass", NodeClass},{"NodePins", pinArr}});	
 			}
 			
 		}
 
 		const char* EdGraphName = TCHAR_TO_ANSI(*EdGraph->GetName());
-		arr2->push_back({{"Name", EdGraphName},{"Nodes", arr}});
+		arr2->push_back({{"GraphName", EdGraphName},{"GraphNodes", arr}});
 	}
 }
 
@@ -166,10 +195,10 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 	for (FBPVariableDescription BPVariableDescription : BPVariableDescriptions)
 	{
 
-		FString SourceValue = BPVariableDescription.VarName.ToString();
-		const char* ThePointerYouWant = TCHAR_TO_ANSI(*SourceValue);
+		FString VarNameF = BPVariableDescription.VarName.ToString();
+		const char* VarName = TCHAR_TO_ANSI(*VarNameF);
 		
-		arr2->push_back({{"Name", ThePointerYouWant}});
+		arr2->push_back({{"VarName", VarName}});
 	}
 }
 
