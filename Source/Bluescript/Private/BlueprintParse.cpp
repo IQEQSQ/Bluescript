@@ -17,7 +17,7 @@ using namespace configor;
 // {
 // 	// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(SourceValue)));
 // 	// const char* ThePointerYouWant = s.c_str();
-// 	const char* ThePointerYouWant = TCHAR_TO_ANSI(*SourceValue);
+// 	const char* ThePointerYouWant = TCHAR_TO_UTF8(*SourceValue);
 // 	return ThePointerYouWant;
 // }
 
@@ -31,7 +31,7 @@ FString GetNodeTitle(UEdGraphNode* Node)
 		return TEXT("");
 	}
 	
-	const FText Title = Node->GetNodeTitle(ENodeTitleType::EditableTitle);
+	const FText Title = Node->GetNodeTitle(ENodeTitleType::ListView);
 	FString NodeTitle = Title.ToString();
 	return NodeTitle;
 }
@@ -125,14 +125,14 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 					UEdGraphNode* OwingNode = PinLinked->GetOwningNode();
 					FString PinNodeNameF = GetNodeName(OwingNode);
 					FString PinNodeTitleF = GetNodeTitle(OwingNode);
-					const char* PinOwningNodeTitle = TCHAR_TO_ANSI(*PinNodeTitleF);
-					const char* PinOwningNodeName = TCHAR_TO_ANSI(*PinNodeNameF);
+					const char* PinOwningNodeTitle = TCHAR_TO_UTF8(*PinNodeTitleF);
+					const char* PinOwningNodeName = TCHAR_TO_UTF8(*PinNodeNameF);
 					FString PinOwningNodeClassF = GetNodeClass(Node);
-					const char* PinOwningNodeClass = TCHAR_TO_ANSI(*PinOwningNodeClassF);
+					const char* PinOwningNodeClass = TCHAR_TO_UTF8(*PinOwningNodeClassF);
 					// const char* PinNode = FStringTOChar(PinNodeF);
 					// std::string s = std::string();
 					FString PinLinkedNameF = GetPinName(PinLinked);
-					const char* PinName = TCHAR_TO_ANSI(*PinLinkedNameF);
+					const char* PinName = TCHAR_TO_UTF8(*PinLinkedNameF);
 					
 					if(OwingNode)
 					{
@@ -147,7 +147,7 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 				FString PinName2F = GetPinName(Pin);
 				// const char* PinName2 = FStringTOChar(Pin->PinName.ToString());
 				// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(Pin->PinName.ToString())));
-				const char* PinName2 = TCHAR_TO_ANSI(*PinName2F);
+				const char* PinName2 = TCHAR_TO_UTF8(*PinName2F);
 				if(jsonLinkedToArray.size() == 0){
 // #ifdef IS_CONTAIN_NO_LINKED_PINS
 					if(IsContainNoLinkedPins)
@@ -166,13 +166,13 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 			}
 
 			FString NodeNameF = GetNodeName(Node);
-			const char* NodeName = TCHAR_TO_ANSI(*NodeNameF);
+			const char* NodeName = TCHAR_TO_UTF8(*NodeNameF);
 			
 			FString NodeTitleF = GetNodeTitle(Node);
-			const char* NodeTitle = TCHAR_TO_ANSI(*NodeTitleF);
+			const char* NodeTitle = TCHAR_TO_UTF8(*NodeTitleF);
 			
 			FString NodeClassF = GetNodeClass(Node);
-			const char* NodeClass = TCHAR_TO_ANSI(*NodeClassF);
+			const char* NodeClass = TCHAR_TO_UTF8(*NodeClassF);
 			
 			if(pinArr.size() == 0){
 				arr.push_back({{"NodeName", NodeName}, {"NodeTitle", NodeTitle}, {"NodeClass", NodeClass}});
@@ -183,7 +183,7 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 			
 		}
 
-		const char* EdGraphName = TCHAR_TO_ANSI(*EdGraph->GetName());
+		const char* EdGraphName = TCHAR_TO_UTF8(*EdGraph->GetName());
 		arr2->push_back({{"GraphName", EdGraphName},{"GraphNodes", arr}});
 	}
 }
@@ -195,7 +195,7 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 	{
 
 		FString VarNameF = BPVariableDescription.VarName.ToString();
-		const char* VarName = TCHAR_TO_ANSI(*VarNameF);
+		const char* VarName = TCHAR_TO_UTF8(*VarNameF);
 		
 		arr2->push_back({{"VarName", VarName}});
 	}
@@ -215,7 +215,7 @@ void BlueprintParse::StartParse()
 	FString ConfigPath = PluginPath + TEXT("/Config/config.json");
 	ConfigPath = FPaths::ConvertRelativePathToFull(ConfigPath);
 	FFileHelper::LoadFileToString(ConfigString, *ConfigPath);
-	const auto ConfigTChar = TCHAR_TO_ANSI(*ConfigString);
+	const auto ConfigTChar = TCHAR_TO_UTF8(*ConfigString);
 	json ConfigData = json::parse(ConfigTChar);
 	auto root = ConfigData["root"];
 	auto data3 = root.as_string();
@@ -262,12 +262,20 @@ void BlueprintParse::StartParse()
 		ParseGraphs(&(j["IntermediateGeneratedGraphs"]), IntermediateGeneratedGraphs);
 		ParseGraphs(&(j["NewVariables"]), NewVariables);
 
-		const auto k = j.dump(4, ' ');
-		const auto s = k.c_str();
-		const FString FileData = FString(s);
-		FString TextPath = PluginPath + TEXT("/Data/") + Asset.AssetName.ToString() + TEXT(".json");
-		TextPath = FPaths::ConvertRelativePathToFull(TextPath);
-		FFileHelper::SaveStringToFile(FileData, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
+		try
+		{
+			const auto k = j.dump<encoding::utf8>(4, ' ');
+			const auto s = k.c_str();
+			const FString FileData = FString(s);
+			FString TextPath = PluginPath + TEXT("/Data/") + Asset.AssetName.ToString() + TEXT(".json");
+			TextPath = FPaths::ConvertRelativePathToFull(TextPath);
+			FFileHelper::SaveStringToFile(FileData, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
+		}
+		catch (...)
+		{
+			printf_s(TCHAR_TO_UTF8(*(Asset.AssetName.ToString())));
+		}
+		
 		
 	}
 #endif
