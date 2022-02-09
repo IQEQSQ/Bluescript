@@ -158,6 +158,10 @@ void BlueprintParse::StartParse()
 	{
 		const TCHAR* BP_Path = ToCStr(Asset.ObjectPath.ToString());
 		const UBlueprint* Blueprint = Cast<UBlueprint>(StaticLoadObject(UObject::StaticClass(), nullptr, BP_Path));
+		if (Blueprint == NULL)
+		{
+			continue;
+		}
 		const TArray<UEdGraph*> EventGraphs = Blueprint->EventGraphs;
 		const TArray<UEdGraph*> FunctionGraphs = Blueprint->FunctionGraphs;
 		const TArray<UEdGraph*> MacroGraphs = Blueprint->MacroGraphs;
