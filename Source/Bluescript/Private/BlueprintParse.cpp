@@ -31,7 +31,7 @@ FString GetNodeTitle(UEdGraphNode* Node)
 		return TEXT("");
 	}
 	
-	const FText Title = Node->GetNodeTitle(ENodeTitleType::FullTitle);
+	const FText Title = Node->GetNodeTitle(ENodeTitleType::EditableTitle);
 	FString NodeTitle = Title.ToString();
 	return NodeTitle;
 }
