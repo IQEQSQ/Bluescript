@@ -387,7 +387,7 @@ public:
         return result;
     }
 
-    inline void push_back(basic_config&& config)
+    inline void push_back(basic_config config)
     {
         if (!is_null() && !is_array())
         {
@@ -402,7 +402,7 @@ public:
         value_.data.vector->push_back(std::move(config));
     }
 
-    inline basic_config& operator+=(basic_config&& config)
+    inline basic_config operator+=(basic_config config)
     {
         push_back(std::move(config));
         return (*this);
