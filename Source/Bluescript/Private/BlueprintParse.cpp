@@ -104,12 +104,19 @@ FString GetPinName(UEdGraphPin* Pin)
 	return PinName;
 }
 
-void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray<UEdGraph*> EdGraphs)
+void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> EdGraphs)
 {
+	json arr2= json::array({});
 	for (UEdGraph* EdGraph : EdGraphs)
 	{
+		json JsonGraph;
+		
 		json arr = json::array({});
+		const char* EdGraphName = TCHAR_TO_UTF8(*EdGraph->GetName());
+		// basic_config<json_args>&& one_json = &()) ;
 
+		JsonGraph["GraphName"] = EdGraphName;
+		
 		for (UEdGraphNode* Node : EdGraph->Nodes)
 		{
 			TArray<UEdGraphPin*> Pins = Node->Pins;
@@ -148,19 +155,20 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 				// const char* PinName2 = FStringTOChar(Pin->PinName.ToString());
 				// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(Pin->PinName.ToString())));
 				const char* PinName2 = TCHAR_TO_UTF8(*PinName2F);
-				if(jsonLinkedToArray.size() == 0){
-// #ifdef IS_CONTAIN_NO_LINKED_PINS
+				if(jsonLinkedToArray.size() != 0){
+					pinArr.push_back({{"PinName", PinName2}, {"PinLinkedTo", jsonLinkedToArray}});
+					
+				
+				}else
+				{
+					// #ifdef IS_CONTAIN_NO_LINKED_PINS
 					if(IsContainNoLinkedPins)
 					{
 						pinArr.push_back({{"Name", PinName2}});
 					}
 
-// #endif
-					
-				
-				}else
-				{
-					pinArr.push_back({{"PinName", PinName2}, {"PinLinkedTo", jsonLinkedToArray}});	//	
+					// #endif
+						//	
 				}
 				
 			}
@@ -173,32 +181,63 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 			
 			FString NodeClassF = GetNodeClass(Node);
 			const char* NodeClass = TCHAR_TO_UTF8(*NodeClassF);
-			
-			if(pinArr.size() == 0){
-				arr.push_back({{"NodeName", NodeName}, {"NodeTitle", NodeTitle}, {"NodeClass", NodeClass}});
-			}else
+
+			UK2Node_FunctionEntry* K2Node_FunctionEntry = Cast<UK2Node_FunctionEntry>(Node);
+			json JsonPin;
+			JsonPin["NodeName"] = NodeName;
+			JsonPin["NodeTitle"] = NodeTitle;
+			JsonPin["NodeClass"] = NodeClass;
+			if (K2Node_FunctionEntry)
 			{
-				arr.push_back({{"NodeName", NodeName}, {"NodeTitle", NodeTitle}, {"NodeClass", NodeClass},{"NodePins", pinArr}});	
+				auto LocalVariables = K2Node_FunctionEntry->LocalVariables;
+
+				ParseGraphs(&JsonGraph, "LocalVariables", LocalVariables);
 			}
 			
+			if(pinArr.size() != 0){
+				
+				JsonPin["NodePins"] = pinArr;
+			}
+			
+			arr.push_back(JsonPin);
 		}
+		if(arr.size() != 0)
+		{
+			JsonGraph["GraphNodes"] = arr;
+		}
+		
+		arr2.push_back(JsonGraph);
 
-		const char* EdGraphName = TCHAR_TO_UTF8(*EdGraph->GetName());
-		arr2->push_back({{"GraphName", EdGraphName},{"GraphNodes", arr}});
 	}
+	if(arr2.size()==0)
+	{
+		return;
+	}
+	(*j)[name] = arr2;
 }
 
 
-void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray<FBPVariableDescription> BPVariableDescriptions)
+void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<FBPVariableDescription> BPVariableDescriptions)
 {
+	json arr2= json::array({});
 	for (FBPVariableDescription BPVariableDescription : BPVariableDescriptions)
 	{
 
 		FString VarNameF = BPVariableDescription.VarName.ToString();
 		const char* VarName = TCHAR_TO_UTF8(*VarNameF);
-		
-		arr2->push_back({{"VarName", VarName}});
+		auto PinCategoryF = BPVariableDescription.VarType.PinCategory.ToString();
+		const char* PinCategoryType = TCHAR_TO_UTF8(*PinCategoryF);
+		auto _o = json::object({{"PinCategory",PinCategoryType}});
+		json data;
+		data["VarName"] = VarName;
+		data["PinType"] = _o;
+		arr2.push_back(data);
 	}
+	if(arr2.size()==0)
+	{
+		return;
+	}
+	(*j)[name] = arr2;
 }
 
 void BlueprintParse::StartParse()
@@ -247,20 +286,20 @@ void BlueprintParse::StartParse()
 		json j;
 		// json arr = json::array({ });
 		//  = arr;
-		j["EventGraphs"] = json::array({});
-		j["FunctionGraphs"] = json::array({});
-		j["MacroGraphs"] = json::array({});
-		j["UbergraphPages"] = json::array({});
-		j["DelegateSignatureGraphs"] = json::array({});
-		j["IntermediateGeneratedGraphs"] = json::array({});
-		j["NewVariables"] = json::array({});
-		ParseGraphs(&(j["EventGraphs"]), EventGraphs);
-		ParseGraphs(&(j["FunctionGraphs"]), FunctionGraphs);
-		ParseGraphs(&(j["MacroGraphs"]), MacroGraphs);
-		ParseGraphs(&(j["UbergraphPages"]), UbergraphPages);
-		ParseGraphs(&(j["DelegateSignatureGraphs"]), DelegateSignatureGraphs);
-		ParseGraphs(&(j["IntermediateGeneratedGraphs"]), IntermediateGeneratedGraphs);
-		ParseGraphs(&(j["NewVariables"]), NewVariables);
+		// j["EventGraphs"] = json::array({});
+		// j["FunctionGraphs"] = json::array({});
+		// j["MacroGraphs"] = json::array({});
+		// j["UbergraphPages"] = json::array({});
+		// j["DelegateSignatureGraphs"] = json::array({});
+		// j["IntermediateGeneratedGraphs"] = json::array({});
+		// j["NewVariables"] = json::array({});
+		ParseGraphs(&j, "EventGraphs", EventGraphs);
+		ParseGraphs(&j, "FunctionGraphs", FunctionGraphs);
+		ParseGraphs(&j, "MacroGraphs", MacroGraphs);
+		ParseGraphs(&j, "UbergraphPages", UbergraphPages);
+		ParseGraphs(&j, "DelegateSignatureGraphs", DelegateSignatureGraphs);
+		ParseGraphs(&j,"IntermediateGeneratedGraphs", IntermediateGeneratedGraphs);
+		ParseGraphs(&j, "NewVariables", NewVariables);
 
 		try
 		{
