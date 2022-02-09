@@ -13,13 +13,13 @@ using namespace std;
 
 using namespace configor;
 
-const char* FStringTOChar(FString SourceValue)
-{
-	// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(SourceValue)));
-	// const char* ThePointerYouWant = s.c_str();
-	const char* ThePointerYouWant = TCHAR_TO_ANSI(*SourceValue);
-	return ThePointerYouWant;
-}
+// const char* FStringTOChar(FString SourceValue)
+// {
+// 	// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(SourceValue)));
+// 	// const char* ThePointerYouWant = s.c_str();
+// 	const char* ThePointerYouWant = TCHAR_TO_ANSI(*SourceValue);
+// 	return ThePointerYouWant;
+// }
 
 
 FString GetNameFromNode(UEdGraphNode* Node)
@@ -147,8 +147,17 @@ void BlueprintParse::StartParse()
 	TArray< FAssetData > AssetList;
 
 	FARFilter BPFilter;
-	
-	BPFilter.PackagePaths.Add(FName(TEXT("/Game/Forerunner")));
+	FString ConfigString = FString();
+	FString PluginPath = IPluginManager::Get().FindPlugin("Bluescript")->GetBaseDir();
+	FString ConfigPath = PluginPath + TEXT("/Config/config.json");
+	ConfigPath = FPaths::ConvertRelativePathToFull(ConfigPath);
+	FFileHelper::LoadFileToString(ConfigString, *ConfigPath);
+	const auto ConfigTChar = TCHAR_TO_ANSI(*ConfigString);
+	json ConfigData = json::parse(ConfigTChar);
+	auto root = ConfigData["root"];
+	auto data3 = root.as_string();
+	FString FilterPath = data3.c_str();
+	BPFilter.PackagePaths.Add(FName(FilterPath));
 	BPFilter.bRecursivePaths = true;
 	BPFilter.bRecursiveClasses = true;
 	BPFilter.ClassNames.Add(FName(TEXT("Blueprint")));
@@ -156,8 +165,11 @@ void BlueprintParse::StartParse()
 	AssetRegistry.GetAssets(BPFilter, AssetList);
 	for (FAssetData const& Asset : AssetList)
 	{
-		const TCHAR* BP_Path = ToCStr(Asset.ObjectPath.ToString());
-		const UBlueprint* Blueprint = Cast<UBlueprint>(StaticLoadObject(UObject::StaticClass(), nullptr, BP_Path));
+		const FName ObjectPath = Asset.ObjectPath;
+		FString ObjectPathString = ObjectPath.ToString();
+		// const wchar_t* BP_Path = ToCStr(ObjectPathString);
+		
+		const UBlueprint* Blueprint = Cast<UBlueprint>(StaticLoadObject(UObject::StaticClass(), nullptr, *ObjectPathString));
 		if (Blueprint == NULL)
 		{
 			continue;
@@ -187,12 +199,13 @@ void BlueprintParse::StartParse()
 		ParseGraphs(&(j["IntermediateGeneratedGraphs"]), IntermediateGeneratedGraphs);
 		ParseGraphs(&(j["NewVariables"]), NewVariables);
 
-		const char* k = j.dump(4, ' ').c_str();
-	
-		FString TextPath = IPluginManager::Get().FindPlugin("Bluescript")->GetBaseDir() + TEXT("/Data/") + Asset.AssetName.ToString() + TEXT(".json");
+		const auto k = j.dump(4, ' ');
+		const auto s = k.c_str();
+		const FString FileData = FString(s);
+		FString TextPath = PluginPath + TEXT("/Data/") + Asset.AssetName.ToString() + TEXT(".json");
 		TextPath = FPaths::ConvertRelativePathToFull(TextPath);
-		FFileHelper::SaveStringToFile(FString(k), *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
-	
+		FFileHelper::SaveStringToFile(FileData, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
+		
 	}
 #endif
 	return;

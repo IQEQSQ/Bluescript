@@ -430,8 +430,8 @@ public:
                 detail::fast_ostringstream ss;
                 ss << "unexpected character '" << static_cast<char>(current_) << "'";
                 ss << " (expected literal '";
-                for (const auto ch : text)
-                    ss.put(static_cast<char>(ch));
+                for (const auto ch2 : text)
+                    ss.put(static_cast<char>(ch2));
                 ss << "')";
                 fail(ss.str());
             }
