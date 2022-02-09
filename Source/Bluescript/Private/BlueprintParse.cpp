@@ -5,7 +5,6 @@
 #include "EdGraph/EdGraphNode.h"
 #include "K2Node_MacroInstance.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Misc/FileHelper.h"
 #include "Interfaces/IPluginManager.h"
 
@@ -22,7 +21,7 @@ using namespace configor;
 // 	return ThePointerYouWant;
 // }
 
-const bool IsContainNoLinkedPins = false;
+constexpr bool IsContainNoLinkedPins = false;
 // #define IS_CONTAIN_NO_LINKED_PINS
 
 FString GetNodeTitle(UEdGraphNode* Node)
@@ -234,7 +233,7 @@ void BlueprintParse::StartParse()
 		// const wchar_t* BP_Path = ToCStr(ObjectPathString);
 		
 		const UBlueprint* Blueprint = Cast<UBlueprint>(StaticLoadObject(UObject::StaticClass(), nullptr, *ObjectPathString));
-		if (Blueprint == NULL)
+		if (Blueprint == nullptr)
 		{
 			continue;
 		}
