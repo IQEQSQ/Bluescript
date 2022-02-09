@@ -1,7 +1,8 @@
 ﻿#include "BlueprintParse.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_Event.h"
-
+#include "K2Node_FunctionEntry.h"
+#include "EdGraph/EdGraphNode.h"
 #include "K2Node_MacroInstance.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -21,8 +22,10 @@ using namespace configor;
 // 	return ThePointerYouWant;
 // }
 
+const bool IsContainNoLinkedPins = false;
+// #define IS_CONTAIN_NO_LINKED_PINS
 
-FString GetNameFromNode(UEdGraphNode* Node)
+FString GetNodeType(UEdGraphNode* Node)
 {
 	if (!Node)
 	{
@@ -35,40 +38,59 @@ FString GetNameFromNode(UEdGraphNode* Node)
 	{
 		SourceValue = K2Node_Event->GetFunctionName().ToString();
 	}
-
+	
 	UK2Node_CallFunction* K2Node_CallFunction = Cast<UK2Node_CallFunction>(Node);
 	if (K2Node_CallFunction)
 	{
 		SourceValue = K2Node_CallFunction->GetFunctionName().ToString();
 	}
-
+	
 	UK2Node_MacroInstance* K2Node_MacroInstance = Cast<UK2Node_MacroInstance>(Node);
 	if (K2Node_MacroInstance)
 	{
 		SourceValue = K2Node_MacroInstance->GetMacroGraph()->GetName();
 	}
-
-	return SourceValue;
+	
+	UK2Node_FunctionEntry* K2Node_FunctionEntry = Cast<UK2Node_FunctionEntry>(Node);
+	if (K2Node_FunctionEntry)
+	{
+		SourceValue = K2Node_FunctionEntry->GetName();
+	}
+	
+	const FText Title = Node->GetNodeTitle(ENodeTitleType::FullTitle);
+	FString NodeType = Title.ToString();
+	return NodeType;
 }
 
-FString GetNameFromPin(UEdGraphPin* Pin)
+FString GetNodeName(UEdGraphNode* Node)
+{
+	if (!Node)
+	{
+		return TEXT("");
+	}
+	
+	FString NodeName = Node->GetName();
+	return NodeName;
+}
+
+FString GetPinName(UEdGraphPin* Pin)
 {
 	if (!Pin)
 	{
 		return TEXT("");
 	}
 
-	FString SourceValue = Pin->PinName.ToString();
-	return SourceValue;
+	FString PinName = Pin->PinName.ToString();
+	return PinName;
 }
 
 void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray<UEdGraph*> EdGraphs)
 {
-	for (UEdGraph* EventGraph : EdGraphs)
+	for (UEdGraph* EdGraph : EdGraphs)
 	{
 		json arr = json::array({});
 
-		for (UEdGraphNode* Node : EventGraph->Nodes)
+		for (UEdGraphNode* Node : EdGraph->Nodes)
 		{
 			TArray<UEdGraphPin*> Pins = Node->Pins;
 			json pinArr = json::array({});
@@ -77,17 +99,21 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 				json jsonLinkedToArray = json::array({});
 				for (UEdGraphPin* PinLInkedToNode : Pin->LinkedTo)
 				{
-					// FString PinNameF = GetNameFromPin(PinLInkedToNode);
+					// FString PinNameF = GetPinName(PinLInkedToNode);
 					
 					// const char* PinName = FStringTOChar(Pin->PinName.ToString());
-					FString PinNodeF = GetNameFromNode(PinLInkedToNode->GetOwningNode());
-					const char* PinNode = TCHAR_TO_ANSI(*PinNodeF);
+					UEdGraphNode* OwingNode = PinLInkedToNode->GetOwningNode();
+					FString PinNodeNameF = GetNodeName(OwingNode);
+					FString PinNodeTypeF = GetNodeType(OwingNode);
+					const char* PinOwningNodeType = TCHAR_TO_ANSI(*PinNodeTypeF);
+					const char* PinOwningNodeName = TCHAR_TO_ANSI(*PinNodeNameF);
 					// const char* PinNode = FStringTOChar(PinNodeF);
 					// std::string s = std::string();
 					const char* PinName = TCHAR_TO_ANSI(*PinLInkedToNode->PinName.ToString());
-					if(!PinNodeF.IsEmpty())
+					
+					if(OwingNode)
 					{
-						jsonLinkedToArray.push_back({{"PinName", PinName}, {"PinNode",  PinNode}});	//
+						jsonLinkedToArray.push_back({{"PinName", PinName}, {"PinOwningNodeName",  PinOwningNodeName}, {"PinOwningNodeType", PinOwningNodeType}});	//
 					}
 					
 					// const char* k = jsonLinkedToArray.dump(4, ' ').c_str();
@@ -95,12 +121,20 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
       //               	TextPath = FPaths::ConvertRelativePathToFull(TextPath);
       //               		FFileHelper::SaveStringToFile(FString(k), *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
 				}
-				// FString PinName2F = GetNameFromPin(Pin);
+				// FString PinName2F = GetPinName(Pin);
 				// const char* PinName2 = FStringTOChar(Pin->PinName.ToString());
 				// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(Pin->PinName.ToString())));
 				const char* PinName2 = TCHAR_TO_ANSI(*Pin->PinName.ToString());
 				if(jsonLinkedToArray.size() == 0){
-					pinArr.push_back({{"Name", PinName2}});
+// #ifdef IS_CONTAIN_NO_LINKED_PINS
+					if(IsContainNoLinkedPins)
+					{
+						pinArr.push_back({{"Name", PinName2}});
+					}
+
+// #endif
+					
+				
 				}else
 				{
 					pinArr.push_back({{"Name", PinName2}, {"LinkedTo", jsonLinkedToArray}});	//	
@@ -108,33 +142,34 @@ void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray
 				
 			}
 
-			FString NodeNameF = GetNameFromNode(Node);
-			const char* NodeName = TCHAR_TO_ANSI(*NodeNameF);//(NodeNameF);
+			FString NodeNameF = GetNodeName(Node);
+			FString NodeTypeF = GetNodeType(Node);
+			const char* NodeName = TCHAR_TO_ANSI(*NodeNameF);
+			const char* NodeType = TCHAR_TO_ANSI(*NodeTypeF);
 			if(pinArr.size() == 0){
-				arr.push_back({{"Name", NodeName}});
+				arr.push_back({{"Name", NodeName}, {"Type", NodeType}});
 			}else
 			{
-				arr.push_back({{"Name", NodeName}, {"Pins", pinArr}});	
+				arr.push_back({{"Name", NodeName}, {"Type", NodeType},{"Pins", pinArr}});	
 			}
 			
 		}
 
-		arr2->push_back({{"Nodes", arr}});
+		const char* EdGraphName = TCHAR_TO_ANSI(*EdGraph->GetName());
+		arr2->push_back({{"Name", EdGraphName},{"Nodes", arr}});
 	}
 }
 
 
-void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray<FBPVariableDescription> EdGraphs)
+void BlueprintParse::ParseGraphs(configor::basic_config<json_args>* arr2, TArray<FBPVariableDescription> BPVariableDescriptions)
 {
-	for (FBPVariableDescription EventGraph : EdGraphs)
+	for (FBPVariableDescription BPVariableDescription : BPVariableDescriptions)
 	{
-		json arr = json::array({});
 
-		FString SourceValue = EventGraph.VarName.ToString();
+		FString SourceValue = BPVariableDescription.VarName.ToString();
 		const char* ThePointerYouWant = TCHAR_TO_ANSI(*SourceValue);
-		arr.push_back({{"Name", ThePointerYouWant}});
-
-		arr2->push_back({{"Nodes", arr}});
+		
+		arr2->push_back({{"Name", ThePointerYouWant}});
 	}
 }
 
@@ -208,139 +243,4 @@ void BlueprintParse::StartParse()
 		
 	}
 #endif
-	return;
-
-	// TArray<FString> TextLines;
-	// TextLines.Add(TEXT("钢铁为身，而火焰为血。"));
-	// TextLines.Add(TEXT("手制之剑已达千余，纵横无数战场而不败。"));
-	// TextLines.Add(TEXT("不知生。"));
-	// TextLines.Add(TEXT("亦不知死。"));
-	// TextLines.Add(TEXT("未曾一次败退。"));
-	// TextLines.Add(TEXT("常独自一人立于剑丘之巅独醉于胜利中。"));
-	// TextLines.Add(TEXT("然而 留下的只有虚无。"));
-	// TextLines.Add(TEXT("故此 此生已无意义。"));
-	// TextLines.Add(TEXT("则此躯 注定为剑而生。"));
-	// TextLines.Add(TEXT("故我祈求——无限之剑制(Unlimited Blade Works)"));	
-	// FFileHelper::SaveStringArrayToFile(TextLines, *TextPath,FFileHelper::EEncodingOptions::ForceUTF8);
-
-
-
-
-	// j.push_back("aa");
-	// j.push_back({"k","aa"});
-	// json obj = {
-	// 				{
-	// 					"user", {
-	// 		            { "id", 10 },
-	// 					{ "name", "Nomango" }
-	// 					}
-	// 				}
-	// 			};
-	// j.push_back({"k",obj});
-	// auto k = j.dump();
-	// DefaultPawnClass = PlayerPawnBPClass.Class;
-	// std::stringstream s;
-	//
-	// // 把 obj 序列化，并输入到 s 流中
-	// s << json::wrap(GeneratedBP);
-
-	// json j;
-	// 		json arr = json::array({ });
-	// 		arr.();    // 3
-	// arr.empty();   // false
-	// arr.erase(0);  // 第一个元素被删除
-	// arr.clear();
-	// 		// j["number"] = 1;
-	// 		// j["float"] = 1.5;
-	// 		// j["string"] = "this is a string";
-	// 		// j["boolean"] = true;
-	// 		// j["user"]["id"] = 10;
-	// 		// j["user"]["name"] = "Nomango";
-	// 		// 使用初始化列表构造数组
-	// 		json arr = { 1, 2, 3 };
-	// 		// 使用初始化列表构造对象
-	// 		json obj = {
-	// 			{
-	// 				"user", {
-	// 	            { "id", 10 },
-	// 				{ "name", "Nomango" }
-	// 				}
-	// 			}
-	// 		};
-	// 第二个对象
-	// json obj2 = {
-	// 	{ "nul", nullptr },
-	// 	{ "number", 1 },
-	// 	{ "float", 1.3 },
-	// 	{ "boolean", false },
-	// 	{ "string", "中文测试" },
-	// 	{ "array", { 1, 2, true, 1.4 } },
-	// 	{ "object", {
-	//        { "key", "value" },
-	// 	{ "key2", "value2" }
-	// 	}
-	// 	};
-
-	// std::string pretty_str = j.dump(4, ' ');
-	// GraphPages[0]->Nodes[0]->Pins[0].
 }
-
-
-
-// int main() {
-//     // json字符串
-//     string jsonStr = "{\"name\": \"Cloudox\", \"age\": 18}";
-//
-//     // 转成json对象
-//     char* json = (char*)jsonStr.c_str();
-//     Document document;
-//     document.Parse(json);
-//     cout << "Hello World, I'm " << document["name"].GetString() << ", age " << document["age"].GetInt() <<  endl;
-//     
-//     // 添加字符串值的节点
-//     Value str;
-//     str = "male";
-//     document.AddMember("gender", str, document.GetAllocator());// 参数：key、value
-//
-//     // 添加double节点
-//     Value doub;
-//     doub =  188.8;
-//     document.AddMember("height", doub, document.GetAllocator());
-//
-//     cout << "my gender is " << document["gender"].GetString() << " and height is " << document["height"].GetDouble() <<  endl;
-//
-//     // 添加数组
-//     Value arr(kArrayType);
-//     Document::AllocatorType& allocator = document.GetAllocator();
-//     vector<string> vec = {"read", "code", "movie", "game", "walk"};
-//     for (int i = 0; i < 5; i++) {
-//         // 这里很奇怪的是直接放vec[i]编译不通过，不得不转char*再转StringRef
-//         arr.PushBack(StringRef(vec[i].c_str()), allocator);   // 可能需要调用 realloc() 所以需要 allocator
-//     }
-//     // arr.PushBack("read", allocator).PushBack("code", allocator); // 另一种组装数组的方式
-//     document.AddMember("hobby", arr, allocator);
-//     
-//     cout << "my hobby:" << endl;
-//     // 使用引用来连续访问，方便之余还更高效。
-//     const Value& a = document["hobby"];
-//     assert(a.IsArray());// 所有类型的值都可以先进行判断
-//     for (SizeType i = 0; i < a.Size(); i++) // PS: Array 与 std::vector 相似，除了使用索引，也可使用迭代器来访问所有元素。
-//         cout << a[i].GetString() << endl;
-//
-//     // 添加一个json子对象
-//     Value uni(kObjectType);
-//     uni.AddMember("name", "HUST", allocator);
-//     uni.AddMember("location", "wuhan", allocator);
-//     document.AddMember("university", uni, allocator);
-//
-//     cout << "My university is " << document["university"]["name"].GetString() << " which locate in " << document["university"]["location"].GetString() << endl;
-//
-//     // 转成字符串
-//     StringBuffer strBuffer;  
-//     Writer<StringBuffer> writer(strBuffer);  
-//     document.Accept(writer);  
-//     cout << strBuffer.GetString() << endl;
-//     
-//     system("pause");// 暂停以显示终端窗口
-//     return 0;
-// }
