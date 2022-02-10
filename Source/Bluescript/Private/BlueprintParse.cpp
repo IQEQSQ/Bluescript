@@ -355,13 +355,18 @@ void BlueprintParse::StartParse()
 		ParseGraphs(&j,"IntermediateGeneratedGraphs", IntermediateGeneratedGraphs);
 		ParseGraphs(&j, "NewVariables", NewVariables);
 
-		const UBlueprint* BlueprintParent = Cast<UBlueprint>(Blueprint->ParentClass);
-		if (BlueprintParent == nullptr)
+		const FString ParentClassF = Blueprint->ParentClass->GetName();
+		FString ParentClassF2;
+		if(ParentClassF.EndsWith(TEXT("_C")))
 		{
-			const FString ParentClassF = "UE." + Blueprint->ParentClass->GetName();
-			const char* ParentClass = TCHAR_TO_UTF8(*ParentClassF);
-			j["ParentClass"] = ParentClass;
+			ParentClassF2 = ParentClassF.LeftChop(2);
+		}else
+		{
+			ParentClassF2 = TEXT("UE.") + ParentClassF;
 		}
+			
+		const char* ParentClass = TCHAR_TO_UTF8(*ParentClassF2);
+		j["ParentClass"] = ParentClass;
 		
 
 		try
