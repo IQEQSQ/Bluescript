@@ -355,6 +355,15 @@ void BlueprintParse::StartParse()
 		ParseGraphs(&j,"IntermediateGeneratedGraphs", IntermediateGeneratedGraphs);
 		ParseGraphs(&j, "NewVariables", NewVariables);
 
+		const UBlueprint* BlueprintParent = Cast<UBlueprint>(Blueprint->ParentClass);
+		if (BlueprintParent == nullptr)
+		{
+			const FString ParentClassF = "UE." + Blueprint->ParentClass->GetName();
+			const char* ParentClass = TCHAR_TO_UTF8(*ParentClassF);
+			j["ParentClass"] = ParentClass;
+		}
+		
+
 		try
 		{
 			const auto k = j.dump<encoding::utf8>(4, ' ');
