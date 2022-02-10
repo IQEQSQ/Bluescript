@@ -362,7 +362,7 @@ void BlueprintParse::StartParse()
 			const FString FileData = FString(s);
 			FString TextPath = PluginPath + TEXT("/Data/") + Asset.AssetName.ToString() + TEXT(".json");
 			TextPath = FPaths::ConvertRelativePathToFull(TextPath);
-			FFileHelper::SaveStringToFile(FileData, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
+			FFileHelper::SaveStringToFile(FileData, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 		}
 		catch (...)
 		{
