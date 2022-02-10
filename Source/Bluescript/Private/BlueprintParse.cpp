@@ -21,7 +21,7 @@ using namespace configor;
 // 	return ThePointerYouWant;
 // }
 
-constexpr bool IsContainNoLinkedPins = false;
+// constexpr bool IsContainNoLinkedPins = false;
 // #define IS_CONTAIN_NO_LINKED_PINS
 
 FString GetNodeTitle(UEdGraphNode* Node)
@@ -121,6 +121,7 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> Ed
 		{
 			TArray<UEdGraphPin*> Pins = Node->Pins;
 			json pinArr = json::array({});
+			UK2Node_FunctionEntry* K2Node_FunctionEntry = Cast<UK2Node_FunctionEntry>(Node);
 			for (UEdGraphPin* Pin : Pins)
 			{
 				json jsonLinkedToArray = json::array({});
@@ -152,23 +153,57 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> Ed
       //               		FFileHelper::SaveStringToFile(FString(k), *TextPath, FFileHelper::EEncodingOptions::ForceUTF8);
 				}
 				FString PinName2F = GetPinName(Pin);
+			
+				
 				// const char* PinName2 = FStringTOChar(Pin->PinName.ToString());
 				// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(Pin->PinName.ToString())));
 				const char* PinName2 = TCHAR_TO_UTF8(*PinName2F);
-				if(jsonLinkedToArray.size() != 0){
-					pinArr.push_back({{"PinName", PinName2}, {"PinLinkedTo", jsonLinkedToArray}});
-					
-				
-				}else
-				{
-					// #ifdef IS_CONTAIN_NO_LINKED_PINS
-					if(IsContainNoLinkedPins)
-					{
-						pinArr.push_back({{"Name", PinName2}});
-					}
 
-					// #endif
-						//	
+				FString PinCategoryF = Pin->PinType.PinCategory.ToString();
+
+				const char* PinCategoryType = TCHAR_TO_UTF8(*PinCategoryF);
+		
+				auto _o = json::object({{"PinCategory",PinCategoryType}});
+				// if (strcmp(PinCategoryType,"object")==0)
+				// {
+				// 	
+				// }
+				if(Pin->PinType.PinSubCategoryObject != nullptr)
+				{
+					const auto PinSubCategoryObjectF = Pin->PinType.PinSubCategoryObject->GetName();
+					const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
+					_o["PinSubCategoryObject"] = PinSubCategoryObject;
+				}
+				if (!(Pin->PinType.PinSubCategory.IsNone()) && !(Pin->PinType.PinSubCategory.IsValid()))
+				{
+					const auto PinSubCategoryF = Pin->PinType.PinSubCategory.ToString();
+					const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
+					_o["PinSubCategory"] = PinSubCategory;
+				}
+				json dataPin;
+				dataPin["PinName"] = PinName2;
+				dataPin["PinType"] = _o;
+				switch (Pin->Direction.GetValue())
+				{
+					case EGPD_Input:
+						dataPin["PinDirection"] = "EGPD_Input";
+						break;
+					case EGPD_Output:
+						dataPin["PinDirection"] = "EGPD_Output";
+						break;
+					case EGPD_MAX:
+						dataPin["PinDirection"] = "EGPD_MAX";
+						break;;	
+				}
+				
+				
+				if(jsonLinkedToArray.size() != 0){
+					dataPin["PinLinkedTo"] = jsonLinkedToArray;
+					pinArr.push_back(dataPin);
+					
+				}else if(K2Node_FunctionEntry && strcmp(PinName2, "then"))
+				{
+					pinArr.push_back(dataPin);
 				}
 				
 			}
@@ -182,7 +217,7 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> Ed
 			FString NodeClassF = GetNodeClass(Node);
 			const char* NodeClass = TCHAR_TO_UTF8(*NodeClassF);
 
-			UK2Node_FunctionEntry* K2Node_FunctionEntry = Cast<UK2Node_FunctionEntry>(Node);
+			
 			json JsonPin;
 			JsonPin["NodeName"] = NodeName;
 			JsonPin["NodeTitle"] = NodeTitle;
@@ -225,9 +260,28 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<FBPVariableDe
 
 		FString VarNameF = BPVariableDescription.VarName.ToString();
 		const char* VarName = TCHAR_TO_UTF8(*VarNameF);
-		auto PinCategoryF = BPVariableDescription.VarType.PinCategory.ToString();
+		const auto PinCategoryF = BPVariableDescription.VarType.PinCategory.ToString();
 		const char* PinCategoryType = TCHAR_TO_UTF8(*PinCategoryF);
+		
 		auto _o = json::object({{"PinCategory",PinCategoryType}});
+		// if (strcmp(PinCategoryType,"object") == 0)
+		// {
+		// 	const auto PinSubCategoryObjectF = BPVariableDescription.VarType.PinSubCategoryObject->GetName();
+		// 	const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
+		// 	_o["PinSubCategoryObject"] = PinSubCategoryObject;
+		// }
+		if(BPVariableDescription.VarType.PinSubCategoryObject != nullptr)
+		{
+			const auto PinSubCategoryObjectF = BPVariableDescription.VarType.PinSubCategoryObject->GetName();
+			const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
+			_o["PinSubCategoryObject"] = PinSubCategoryObject;
+		}
+		if (!(BPVariableDescription.VarType.PinSubCategory.IsNone()) && !(BPVariableDescription.VarType.PinSubCategory.IsValid()))
+		{
+			const auto PinSubCategoryF = BPVariableDescription.VarType.PinSubCategory.ToString();
+			const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
+			_o["PinSubCategory"] = PinSubCategory;
+		}
 		json data;
 		data["VarName"] = VarName;
 		data["PinType"] = _o;
