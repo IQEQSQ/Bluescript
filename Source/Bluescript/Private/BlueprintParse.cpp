@@ -174,7 +174,7 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> Ed
 					const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
 					_o["PinSubCategoryObject"] = PinSubCategoryObject;
 				}
-				if (!(Pin->PinType.PinSubCategory.IsNone()) && !(Pin->PinType.PinSubCategory.IsValid()))
+				if (!(Pin->PinType.PinSubCategory.IsNone()) && (Pin->PinType.PinSubCategory.IsValid()))
 				{
 					const auto PinSubCategoryF = Pin->PinType.PinSubCategory.ToString();
 					const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
@@ -276,7 +276,7 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<FBPVariableDe
 			const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
 			_o["PinSubCategoryObject"] = PinSubCategoryObject;
 		}
-		if (!(BPVariableDescription.VarType.PinSubCategory.IsNone()) && !(BPVariableDescription.VarType.PinSubCategory.IsValid()))
+		if (!(BPVariableDescription.VarType.PinSubCategory.IsNone()) && (BPVariableDescription.VarType.PinSubCategory.IsValid()))
 		{
 			const auto PinSubCategoryF = BPVariableDescription.VarType.PinSubCategory.ToString();
 			const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
