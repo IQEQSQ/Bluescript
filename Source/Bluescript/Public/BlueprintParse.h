@@ -1,11 +1,13 @@
 ﻿#pragma once
 #include "configor/json.hpp"
-
+using namespace configor;
 class BlueprintParse
 {
 public:
 	static void StartParse();
 private:
-	static void ParseGraphs(configor::json* j, const char* name, TArray<UEdGraph*> EdGraphs);
-	static void ParseGraphs(configor::json* j, const char* name, TArray<FBPVariableDescription> EdGraphs) ;
+	static basic_config<json_args> ParseGraphs(TArray<UEdGraph*> EdGraphs);
+	static basic_config<json_args> ParseGraphs(TArray<FBPVariableDescription> EdGraphs) ;
+	static basic_config<json_args> GetPinTypeJson(FEdGraphPinType PinType);
+	static void AddJsonProperty(json* j, const char* propertyName, basic_config<json_args> JsonData);
 };

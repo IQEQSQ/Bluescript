@@ -104,7 +104,7 @@ FString GetPinName(UEdGraphPin* Pin)
 	return PinName;
 }
 
-void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> EdGraphs)
+basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 {
 	json arr2= json::array({});
 	for (UEdGraph* EdGraph : EdGraphs)
@@ -158,31 +158,10 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> Ed
 				// const char* PinName2 = FStringTOChar(Pin->PinName.ToString());
 				// std::string s = std::string(TCHAR_TO_UTF8(ToCStr(Pin->PinName.ToString())));
 				const char* PinName2 = TCHAR_TO_UTF8(*PinName2F);
-
-				FString PinCategoryF = Pin->PinType.PinCategory.ToString();
-
-				const char* PinCategoryType = TCHAR_TO_UTF8(*PinCategoryF);
-		
-				auto _o = json::object({{"PinCategory",PinCategoryType}});
-				// if (strcmp(PinCategoryType,"object")==0)
-				// {
-				// 	
-				// }
-				if(Pin->PinType.PinSubCategoryObject != nullptr)
-				{
-					const auto PinSubCategoryObjectF = Pin->PinType.PinSubCategoryObject->GetName();
-					const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
-					_o["PinSubCategoryObject"] = PinSubCategoryObject;
-				}
-				if (!(Pin->PinType.PinSubCategory.IsNone()) && (Pin->PinType.PinSubCategory.IsValid()))
-				{
-					const auto PinSubCategoryF = Pin->PinType.PinSubCategory.ToString();
-					const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
-					_o["PinSubCategory"] = PinSubCategory;
-				}
+				
 				json dataPin;
 				dataPin["PinName"] = PinName2;
-				dataPin["PinType"] = _o;
+				dataPin["PinType"] = GetPinTypeJson(Pin->PinType);
 				switch (Pin->Direction.GetValue())
 				{
 					case EGPD_Input:
@@ -225,8 +204,8 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> Ed
 			if (K2Node_FunctionEntry)
 			{
 				auto LocalVariables = K2Node_FunctionEntry->LocalVariables;
-
-				ParseGraphs(&JsonGraph, "LocalVariables", LocalVariables);
+				auto LocalVariablesJson = ParseGraphs(LocalVariables);
+				AddJsonProperty(&JsonGraph, "LocalVariables", ParseGraphs(LocalVariables));
 			}
 			
 			if(pinArr.size() != 0){
@@ -246,13 +225,13 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<UEdGraph*> Ed
 	}
 	if(arr2.size()==0)
 	{
-		return;
+		return nullptr;
 	}
-	(*j)[name] = arr2;
+	return arr2;
 }
 
 
-void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<FBPVariableDescription> BPVariableDescriptions)
+basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<FBPVariableDescription> BPVariableDescriptions)
 {
 	json arr2= json::array({});
 	for (FBPVariableDescription BPVariableDescription : BPVariableDescriptions)
@@ -260,38 +239,118 @@ void BlueprintParse::ParseGraphs(json* j, const char* name, TArray<FBPVariableDe
 
 		FString VarNameF = BPVariableDescription.VarName.ToString();
 		const char* VarName = TCHAR_TO_UTF8(*VarNameF);
-		const auto PinCategoryF = BPVariableDescription.VarType.PinCategory.ToString();
-		const char* PinCategoryType = TCHAR_TO_UTF8(*PinCategoryF);
-		
-		auto _o = json::object({{"PinCategory",PinCategoryType}});
-		// if (strcmp(PinCategoryType,"object") == 0)
-		// {
-		// 	const auto PinSubCategoryObjectF = BPVariableDescription.VarType.PinSubCategoryObject->GetName();
-		// 	const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
-		// 	_o["PinSubCategoryObject"] = PinSubCategoryObject;
-		// }
-		if(BPVariableDescription.VarType.PinSubCategoryObject != nullptr)
-		{
-			const auto PinSubCategoryObjectF = BPVariableDescription.VarType.PinSubCategoryObject->GetName();
-			const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
-			_o["PinSubCategoryObject"] = PinSubCategoryObject;
-		}
-		if (!(BPVariableDescription.VarType.PinSubCategory.IsNone()) && (BPVariableDescription.VarType.PinSubCategory.IsValid()))
-		{
-			const auto PinSubCategoryF = BPVariableDescription.VarType.PinSubCategory.ToString();
-			const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
-			_o["PinSubCategory"] = PinSubCategory;
-		}
 		json data;
 		data["VarName"] = VarName;
-		data["PinType"] = _o;
+		data["VarType"] = GetPinTypeJson(BPVariableDescription.VarType);
 		arr2.push_back(data);
 	}
 	if(arr2.size()==0)
 	{
+		return nullptr;
+	}
+	return  arr2;
+}
+
+void BlueprintParse::AddJsonProperty(json* j, const char* propertyName, basic_config<json_args> JsonData)
+{
+	if(JsonData == nullptr)
+	{
 		return;
 	}
-	(*j)[name] = arr2;
+	(*j)[propertyName] = JsonData;
+}
+
+basic_config<json_args> BlueprintParse::GetPinTypeJson(FEdGraphPinType PinType)
+{
+	const auto PinCategoryF = PinType.PinCategory.ToString();
+	const char* PinCategoryType = TCHAR_TO_UTF8(*PinCategoryF);
+		
+	auto _o = json::object({{"PinCategory",PinCategoryType}});
+	// if (strcmp(PinCategoryType,"object") == 0)
+	// {
+	// 	const auto PinSubCategoryObjectF = BPVariableDescription.VarType.PinSubCategoryObject->GetName();
+	// 	const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
+	// 	_o["PinSubCategoryObject"] = PinSubCategoryObject;
+	// }
+	if(PinType.PinSubCategoryObject != nullptr)
+	{
+		const auto PinSubCategoryObjectF = PinType.PinSubCategoryObject->GetName();
+		const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
+		_o["PinSubCategoryObject"] = PinSubCategoryObject;
+	}
+	if (!(PinType.PinSubCategory.IsNone()) && (PinType.PinSubCategory.IsValid()))
+	{
+		const auto PinSubCategoryF = PinType.PinSubCategory.ToString();
+		const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
+		_o["PinSubCategory"] = PinSubCategory;
+	}
+
+	if(PinType.IsArray())
+	{
+		_o["IsArray"] = PinType.IsArray();
+	}
+	if(PinType.IsContainer())
+	{
+		_o["IsContainer"] = PinType.IsContainer();
+	}
+	if(PinType.IsMap())
+	{
+		_o["IsMap"] = PinType.IsMap();
+		auto valueJson = json::object({});
+		if(PinType.PinValueType.bTerminalIsConst)
+		{
+			valueJson["bTerminalIsConst"] = PinType.PinValueType.bTerminalIsConst == 1;
+		}
+		if(PinType.PinValueType.bTerminalIsWeakPointer)
+		{
+			valueJson["bTerminalIsWeakPointer"] = PinType.PinValueType.bTerminalIsWeakPointer == 1;
+		}
+		if(PinType.PinValueType.bTerminalIsUObjectWrapper)
+		{
+			valueJson["bTerminalIsUObjectWrapper"] = PinType.PinValueType.bTerminalIsUObjectWrapper == 1;
+		}
+		if(!(PinType.PinValueType.TerminalCategory.IsNone()) && (PinType.PinValueType.TerminalCategory.IsValid()))
+		{
+			const auto PinSubCategoryF = PinType.PinValueType.TerminalCategory.ToString();
+			const char* TerminalCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
+			valueJson["TerminalCategory"] = TerminalCategory;
+		}
+		if(!(PinType.PinValueType.TerminalSubCategory.IsNone()) && (PinType.PinValueType.TerminalSubCategory.IsValid()))
+		{
+			const auto PinSubCategoryF = PinType.PinValueType.TerminalSubCategory.ToString();
+			const char* TerminalSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
+			valueJson["TerminalSubCategory"] = TerminalSubCategory;
+		}
+		if(PinType.PinValueType.TerminalSubCategoryObject != nullptr)
+		{
+			const auto PinSubCategoryObjectF = PinType.PinValueType.TerminalSubCategoryObject->GetName();
+			const char* TerminalSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
+			valueJson["TerminalSubCategoryObject"] = TerminalSubCategoryObject;
+		}
+		_o["PinValueType"] = valueJson;
+	}
+	if(PinType.IsSet())
+	{
+		_o["IsSet"] = PinType.IsSet();
+	}
+	if(PinType.bIsConst)
+	{
+		_o["bIsConst"] = PinType.bIsConst == 1;
+	}
+	if(PinType.bIsConst)
+	{
+		_o["bIsConst"] = PinType.bIsConst == 1;
+	}
+	if(PinType.bIsWeakPointer)
+	{
+		_o["bIsWeakPointer"] = PinType.bIsWeakPointer == 1;
+	}
+	if(PinType.bIsUObjectWrapper)
+	{
+		_o["bIsUObjectWrapper"] = PinType.bIsUObjectWrapper == 1;
+	}
+
+	return _o;
 }
 
 void BlueprintParse::StartParse()
@@ -347,13 +406,13 @@ void BlueprintParse::StartParse()
 		// j["DelegateSignatureGraphs"] = json::array({});
 		// j["IntermediateGeneratedGraphs"] = json::array({});
 		// j["NewVariables"] = json::array({});
-		ParseGraphs(&j, "EventGraphs", EventGraphs);
-		ParseGraphs(&j, "FunctionGraphs", FunctionGraphs);
-		ParseGraphs(&j, "MacroGraphs", MacroGraphs);
-		ParseGraphs(&j, "UbergraphPages", UbergraphPages);
-		ParseGraphs(&j, "DelegateSignatureGraphs", DelegateSignatureGraphs);
-		ParseGraphs(&j,"IntermediateGeneratedGraphs", IntermediateGeneratedGraphs);
-		ParseGraphs(&j, "NewVariables", NewVariables);
+		AddJsonProperty(&j, "EventGraphs", ParseGraphs(EventGraphs));
+		AddJsonProperty(&j, "MacroGraphs", ParseGraphs(MacroGraphs));
+		AddJsonProperty(&j, "UbergraphPages", ParseGraphs(UbergraphPages));
+		AddJsonProperty(&j, "DelegateSignatureGraphs", ParseGraphs(DelegateSignatureGraphs));
+		AddJsonProperty(&j, "IntermediateGeneratedGraphs", ParseGraphs(IntermediateGeneratedGraphs));
+		AddJsonProperty(&j, "NewVariables", ParseGraphs(NewVariables));
+	
 
 		const FString ParentClassF = Blueprint->ParentClass->GetName();
 		FString ParentClassF2;
