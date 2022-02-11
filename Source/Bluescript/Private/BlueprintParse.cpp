@@ -32,7 +32,7 @@ FString GetNodeTitle(UEdGraphNode* Node)
 	}
 	
 	const FText Title = Node->GetNodeTitle(ENodeTitleType::ListView);
-	FString NodeTitle = Title.ToString();
+	FString NodeTitle = Title.ToString().Replace(TEXT(" "), TEXT(""));
 	return NodeTitle;
 }
 
@@ -111,11 +111,9 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 	{
 		json JsonGraph;
 		
-		json arr = json::array({});
-		const char* EdGraphName = TCHAR_TO_UTF8(*EdGraph->GetName());
-		// basic_config<json_args>&& one_json = &()) ;
+		json JsonNodes = json::array({});
 
-		JsonGraph["GraphName"] = EdGraphName;
+		AddJsonPropertyString(&JsonGraph, "GraphName", *EdGraph->GetName());
 		
 		for (UEdGraphNode* Node : EdGraph->Nodes)
 		{
@@ -213,11 +211,11 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 				JsonPin["NodePins"] = pinArr;
 			}
 			
-			arr.push_back(JsonPin);
+			JsonNodes.push_back(JsonPin);
 		}
-		if(arr.size() != 0)
+		if(JsonNodes.size() != 0)
 		{
-			JsonGraph["GraphNodes"] = arr;
+			JsonGraph["GraphNodes"] = JsonNodes;
 		}
 		
 		arr2.push_back(JsonGraph);
@@ -242,6 +240,9 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<FBPVariableDescripti
 		json data;
 		data["VarName"] = VarName;
 		data["VarType"] = GetPinTypeJson(BPVariableDescription.VarType);
+		AddJsonPropertyString(&data, "DefaultValue", BPVariableDescription.DefaultValue);
+		data["ReplicationCondition"] = (int)BPVariableDescription.ReplicationCondition.GetValue();
+		AddJsonPropertyString(&data, "RepNotifyFunc", BPVariableDescription.RepNotifyFunc.ToString());
 		arr2.push_back(data);
 	}
 	if(arr2.size()==0)
@@ -260,12 +261,22 @@ void BlueprintParse::AddJsonProperty(json* j, const char* propertyName, basic_co
 	(*j)[propertyName] = JsonData;
 }
 
+void BlueprintParse::AddJsonPropertyString(json* j, const char* propertyName, FString str)
+{
+	if(str.IsEmpty())
+	{
+		return;
+	}
+	const char* PinSubCategory = TCHAR_TO_UTF8(*str);
+	(*j)[propertyName] = PinSubCategory;
+}
+
 basic_config<json_args> BlueprintParse::GetPinTypeJson(FEdGraphPinType PinType)
 {
 	const auto PinCategoryF = PinType.PinCategory.ToString();
 	const char* PinCategoryType = TCHAR_TO_UTF8(*PinCategoryF);
 		
-	auto _o = json::object({{"PinCategory",PinCategoryType}});
+	auto JsonPinType = json::object({{"PinCategory",PinCategoryType}});
 	// if (strcmp(PinCategoryType,"object") == 0)
 	// {
 	// 	const auto PinSubCategoryObjectF = BPVariableDescription.VarType.PinSubCategoryObject->GetName();
@@ -276,81 +287,81 @@ basic_config<json_args> BlueprintParse::GetPinTypeJson(FEdGraphPinType PinType)
 	{
 		const auto PinSubCategoryObjectF = PinType.PinSubCategoryObject->GetName();
 		const char* PinSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
-		_o["PinSubCategoryObject"] = PinSubCategoryObject;
+		JsonPinType["PinSubCategoryObject"] = PinSubCategoryObject;
 	}
 	if (!(PinType.PinSubCategory.IsNone()) && (PinType.PinSubCategory.IsValid()))
 	{
 		const auto PinSubCategoryF = PinType.PinSubCategory.ToString();
 		const char* PinSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
-		_o["PinSubCategory"] = PinSubCategory;
+		JsonPinType["PinSubCategory"] = PinSubCategory;
 	}
 
 	if(PinType.IsArray())
 	{
-		_o["IsArray"] = PinType.IsArray();
+		JsonPinType["IsArray"] = PinType.IsArray();
 	}
 	if(PinType.IsContainer())
 	{
-		_o["IsContainer"] = PinType.IsContainer();
+		JsonPinType["IsContainer"] = PinType.IsContainer();
 	}
 	if(PinType.IsMap())
 	{
-		_o["IsMap"] = PinType.IsMap();
-		auto valueJson = json::object({});
+		JsonPinType["IsMap"] = PinType.IsMap();
+		auto JsonValueType = json::object({});
 		if(PinType.PinValueType.bTerminalIsConst)
 		{
-			valueJson["bTerminalIsConst"] = PinType.PinValueType.bTerminalIsConst == 1;
+			JsonValueType["bTerminalIsConst"] = PinType.PinValueType.bTerminalIsConst == 1;
 		}
 		if(PinType.PinValueType.bTerminalIsWeakPointer)
 		{
-			valueJson["bTerminalIsWeakPointer"] = PinType.PinValueType.bTerminalIsWeakPointer == 1;
+			JsonValueType["bTerminalIsWeakPointer"] = PinType.PinValueType.bTerminalIsWeakPointer == 1;
 		}
 		if(PinType.PinValueType.bTerminalIsUObjectWrapper)
 		{
-			valueJson["bTerminalIsUObjectWrapper"] = PinType.PinValueType.bTerminalIsUObjectWrapper == 1;
+			JsonValueType["bTerminalIsUObjectWrapper"] = PinType.PinValueType.bTerminalIsUObjectWrapper == 1;
 		}
 		if(!(PinType.PinValueType.TerminalCategory.IsNone()) && (PinType.PinValueType.TerminalCategory.IsValid()))
 		{
 			const auto PinSubCategoryF = PinType.PinValueType.TerminalCategory.ToString();
 			const char* TerminalCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
-			valueJson["TerminalCategory"] = TerminalCategory;
+			JsonValueType["TerminalCategory"] = TerminalCategory;
 		}
 		if(!(PinType.PinValueType.TerminalSubCategory.IsNone()) && (PinType.PinValueType.TerminalSubCategory.IsValid()))
 		{
 			const auto PinSubCategoryF = PinType.PinValueType.TerminalSubCategory.ToString();
 			const char* TerminalSubCategory = TCHAR_TO_UTF8(*PinSubCategoryF);
-			valueJson["TerminalSubCategory"] = TerminalSubCategory;
+			JsonValueType["TerminalSubCategory"] = TerminalSubCategory;
 		}
 		if(PinType.PinValueType.TerminalSubCategoryObject != nullptr)
 		{
 			const auto PinSubCategoryObjectF = PinType.PinValueType.TerminalSubCategoryObject->GetName();
 			const char* TerminalSubCategoryObject = TCHAR_TO_UTF8(*PinSubCategoryObjectF);
-			valueJson["TerminalSubCategoryObject"] = TerminalSubCategoryObject;
+			JsonValueType["TerminalSubCategoryObject"] = TerminalSubCategoryObject;
 		}
-		_o["PinValueType"] = valueJson;
+		JsonPinType["PinValueType"] = JsonValueType;
 	}
 	if(PinType.IsSet())
 	{
-		_o["IsSet"] = PinType.IsSet();
+		JsonPinType["IsSet"] = PinType.IsSet();
 	}
 	if(PinType.bIsConst)
 	{
-		_o["bIsConst"] = PinType.bIsConst == 1;
+		JsonPinType["bIsConst"] = PinType.bIsConst == 1;
 	}
-	if(PinType.bIsConst)
+	if(PinType.bIsReference)
 	{
-		_o["bIsConst"] = PinType.bIsConst == 1;
+		JsonPinType["bIsReference"] = PinType.bIsReference == 1;
 	}
 	if(PinType.bIsWeakPointer)
 	{
-		_o["bIsWeakPointer"] = PinType.bIsWeakPointer == 1;
+		JsonPinType["bIsWeakPointer"] = PinType.bIsWeakPointer == 1;
 	}
 	if(PinType.bIsUObjectWrapper)
 	{
-		_o["bIsUObjectWrapper"] = PinType.bIsUObjectWrapper == 1;
+		JsonPinType["bIsUObjectWrapper"] = PinType.bIsUObjectWrapper == 1;
 	}
 
-	return _o;
+	return JsonPinType;
 }
 
 void BlueprintParse::StartParse()
@@ -376,8 +387,10 @@ void BlueprintParse::StartParse()
 	BPFilter.bRecursivePaths = true;
 	BPFilter.bRecursiveClasses = true;
 	BPFilter.ClassNames.Add(FName(TEXT("Blueprint")));
-
+	
 	AssetRegistry.GetAssets(BPFilter, AssetList);
+	IFileManager::Get().DeleteDirectory(*(PluginPath + TEXT("/Data/")), false, true);
+
 	for (FAssetData const& Asset : AssetList)
 	{
 		const FName ObjectPath = Asset.ObjectPath;
@@ -407,6 +420,7 @@ void BlueprintParse::StartParse()
 		// j["IntermediateGeneratedGraphs"] = json::array({});
 		// j["NewVariables"] = json::array({});
 		AddJsonProperty(&j, "EventGraphs", ParseGraphs(EventGraphs));
+		AddJsonProperty(&j, "FunctionGraphs", ParseGraphs(FunctionGraphs));
 		AddJsonProperty(&j, "MacroGraphs", ParseGraphs(MacroGraphs));
 		AddJsonProperty(&j, "UbergraphPages", ParseGraphs(UbergraphPages));
 		AddJsonProperty(&j, "DelegateSignatureGraphs", ParseGraphs(DelegateSignatureGraphs));
@@ -415,19 +429,16 @@ void BlueprintParse::StartParse()
 	
 
 		const FString ParentClassF = Blueprint->ParentClass->GetName();
-		FString ParentClassF2;
-		if(ParentClassF.EndsWith(TEXT("_C")))
-		{
-			ParentClassF2 = ParentClassF.LeftChop(2);
-		}else
-		{
-			ParentClassF2 = TEXT("UE.") + ParentClassF;
-		}
-			
-		const char* ParentClass = TCHAR_TO_UTF8(*ParentClassF2);
+		const char* ParentClass = TCHAR_TO_UTF8(*ParentClassF);
 		j["ParentClass"] = ParentClass;
-		
-
+		json arr2= json::array({});
+		for(const auto blueInter: Blueprint->ImplementedInterfaces)
+		{
+			FString interStr = blueInter.Interface->GetName();
+			const char* interChar = TCHAR_TO_UTF8(*interStr);
+			arr2.push_back(interChar);
+		}
+		j["ImplementedInterfaces"] = arr2;
 		try
 		{
 			const auto k = j.dump<encoding::utf8>(4, ' ');
