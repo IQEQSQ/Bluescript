@@ -143,6 +143,9 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 					if(OwingNode)
 					{
 						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}, {"LinkedPin_OwningNodeName",  PinOwningNodeName}, {"LinkedPin_OwningNodeTitle", PinOwningNodeTitle}, {"LinkedPin_OwningNodeClass",  PinOwningNodeClass}});	//
+					}else
+					{
+						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}});
 					}
 					
 					// const char* k = jsonLinkedToArray.dump(4, ' ').c_str();
@@ -178,7 +181,7 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 					dataPin["PinLinkedTo"] = jsonLinkedToArray;
 					pinArr.push_back(dataPin);
 					
-				}else if(K2Node_FunctionEntry && strcmp(PinName2, "then"))
+				}else// if(K2Node_FunctionEntry && strcmp(PinName2, "then"))
 				{
 					pinArr.push_back(dataPin);
 				}
