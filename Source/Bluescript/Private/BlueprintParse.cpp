@@ -132,6 +132,8 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 					FString PinNodeNameF = GetNodeName(OwingNode);
 					FString PinNodeTitleF = GetNodeTitle(OwingNode);
 					const char* PinOwningNodeTitle = TCHAR_TO_UTF8(*PinNodeTitleF);
+					FString PinNodeTypeF = GetNodeType(OwingNode);
+					const char* PinOwningNodeType = TCHAR_TO_UTF8(*PinNodeTypeF);
 					const char* PinOwningNodeName = TCHAR_TO_UTF8(*PinNodeNameF);
 					FString PinOwningNodeClassF = GetNodeClass(Node);
 					const char* PinOwningNodeClass = TCHAR_TO_UTF8(*PinOwningNodeClassF);
@@ -142,7 +144,7 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 					
 					if(OwingNode)
 					{
-						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}, {"LinkedPin_OwningNodeName",  PinOwningNodeName}, {"LinkedPin_OwningNodeTitle", PinOwningNodeTitle}, {"LinkedPin_OwningNodeClass",  PinOwningNodeClass}});	//
+						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}, {"LinkedPin_OwningNodeName",  PinOwningNodeName}, {"LinkedPin_OwningNodeTitle", PinOwningNodeTitle}, {"LinkedPin_OwningNodeClass",  PinOwningNodeClass}, {"LinkedPin_OwningNodeType",  PinOwningNodeType}});	//
 					}else
 					{
 						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}});
@@ -198,10 +200,11 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 			const char* NodeClass = TCHAR_TO_UTF8(*NodeClassF);
 
 			
-			json JsonPin;
-			JsonPin["NodeName"] = NodeName;
-			JsonPin["NodeTitle"] = NodeTitle;
-			JsonPin["NodeClass"] = NodeClass;
+			json JsonNode;
+			JsonNode["NodeName"] = NodeName;
+			JsonNode["NodeTitle"] = NodeTitle;
+			JsonNode["NodeClass"] = NodeClass;
+			AddJsonPropertyString(&JsonNode, "NodeType", GetNodeType(Node));
 			if (K2Node_FunctionEntry)
 			{
 				auto LocalVariables = K2Node_FunctionEntry->LocalVariables;
@@ -211,10 +214,10 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 			
 			if(pinArr.size() != 0){
 				
-				JsonPin["NodePins"] = pinArr;
+				JsonNode["NodePins"] = pinArr;
 			}
 			
-			JsonNodes.push_back(JsonPin);
+			JsonNodes.push_back(JsonNode);
 		}
 		if(JsonNodes.size() != 0)
 		{
@@ -378,14 +381,16 @@ void BlueprintParse::StartParse()
 	FARFilter BPFilter;
 	FString ConfigString = FString();
 	FString PluginPath = IPluginManager::Get().FindPlugin("Bluescript")->GetBaseDir();
-	FString ConfigPath = PluginPath + TEXT("/Config/config.json");
-	ConfigPath = FPaths::ConvertRelativePathToFull(ConfigPath);
-	FFileHelper::LoadFileToString(ConfigString, *ConfigPath);
-	const auto ConfigTChar = TCHAR_TO_UTF8(*ConfigString);
-	json ConfigData = json::parse(ConfigTChar);
-	auto root = ConfigData["root"];
-	auto data3 = root.as_string();
-	FString FilterPath = data3.c_str();
+	// FString ConfigPath = PluginPath + TEXT("/Config/config.json");
+	// ConfigPath = FPaths::ConvertRelativePathToFull(ConfigPath);
+	// FFileHelper::LoadFileToString(ConfigString, *ConfigPath);
+	// const auto ConfigTChar = TCHAR_TO_UTF8(*ConfigString);
+	// json ConfigData = json::parse(ConfigTChar);
+	// auto root = ConfigData["root"];
+	// auto data3 = root.as_string();
+	// FString FilterPath = data3.c_str();
+	///Game/Blueprints/ 这样写必定会出问题，我也是无语了！@！
+	FString FilterPath = "/Game/Blueprints";//data3.c_str();
 	BPFilter.PackagePaths.Add(FName(FilterPath));
 	BPFilter.bRecursivePaths = true;
 	BPFilter.bRecursiveClasses = true;
