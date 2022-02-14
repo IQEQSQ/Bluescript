@@ -135,7 +135,7 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 					FString PinNodeTypeF = GetNodeType(OwingNode);
 					const char* PinOwningNodeType = TCHAR_TO_UTF8(*PinNodeTypeF);
 					const char* PinOwningNodeName = TCHAR_TO_UTF8(*PinNodeNameF);
-					FString PinOwningNodeClassF = GetNodeClass(Node);
+					FString PinOwningNodeClassF = GetNodeClass(OwingNode);
 					const char* PinOwningNodeClass = TCHAR_TO_UTF8(*PinOwningNodeClassF);
 					// const char* PinNode = FStringTOChar(PinNodeF);
 					// std::string s = std::string();
@@ -178,6 +178,7 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 						break;;	
 				}
 				
+				AddJsonPropertyString(&dataPin, "DefaultValue", Pin->DefaultValue);
 				
 				if(jsonLinkedToArray.size() != 0){
 					dataPin["PinLinkedTo"] = jsonLinkedToArray;

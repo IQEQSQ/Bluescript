@@ -1,3 +1,22 @@
 {
-    "root": "/Game/Blueprints"
+    "root": "/Game/Blueprints",
+    "scriptPath": "../../Content/BlueScripts/",
+    "jsonFilePath": "BPC_Hit",
+    "jsonFolderPath": "",
+    "isFolder": true,
+    "className": "UIHome",
+    "jsonRootPath" :"Data/",
+    "justAddScript":false,
+    "isWidget": false,
+    "assetsPath": "../PartyIO/assets/",
+    "scriptUIPath": "/UI/",
+    "prefabUIPath": "/UI/",
+    "enumUIPath":"Base/UIManager/EnumUI",
+    "dependencyUIPath": "Base/UIManager/DependencyUI",
+    "gameName":"StateIO",
+    "basePath":"Base",
+    "isBase":true,
+    "excludePaths":["UIGame2","UIGame4","UIGame3"],
+    "isTemp": false,
+    "justAddListEnumUI": false
 }
