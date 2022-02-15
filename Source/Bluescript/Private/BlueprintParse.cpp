@@ -164,7 +164,15 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 				
 				json dataPin;
 				dataPin["PinName"] = PinName2;
+				AddJsonPropertyString(&dataPin, "PinFriendlyName", Pin->PinFriendlyName.ToString());
 				dataPin["PinType"] = GetPinTypeJson(Pin->PinType);
+				if(Pin->bHidden)
+				{
+					AddJsonPropertyString(&dataPin, "bHidden", FString("true"));
+				}
+				
+				dataPin["PinType"] = GetPinTypeJson(Pin->PinType);
+				
 				switch (Pin->Direction.GetValue())
 				{
 					case EGPD_Input:
