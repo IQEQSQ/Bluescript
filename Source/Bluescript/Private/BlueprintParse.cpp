@@ -141,15 +141,26 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 					// std::string s = std::string();
 					FString PinLinkedNameF = GetPinName(PinLinked);
 					const char* PinName = TCHAR_TO_UTF8(*PinLinkedNameF);
-					
-					if(OwingNode)
+					json dataLinkedPin = json::object({{"LinkedPin_Name", PinName}});
+					dataLinkedPin["LinkedPin_Type"] = GetPinTypeJson(PinLinked->PinType);
+					AddJsonPropertyString(&dataLinkedPin, "LinkedPin_OwningNodeName", PinOwningNodeName);
+					AddJsonPropertyString(&dataLinkedPin, "LinkedPin_OwningNodeTitle", PinOwningNodeTitle);
+					AddJsonPropertyString(&dataLinkedPin, "LinkedPin_OwningNodeClass", PinOwningNodeClass);
+					AddJsonPropertyString(&dataLinkedPin, "LinkedPin_OwningNodeType", PinOwningNodeTitle);
+					AddJsonPropertyString(&dataLinkedPin, "LinkedPin_OwningNodeType", PinOwningNodeTitle);
+					switch (PinLinked->Direction.GetValue())
 					{
-						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}, {"LinkedPin_OwningNodeName",  PinOwningNodeName}, {"LinkedPin_OwningNodeTitle", PinOwningNodeTitle}, {"LinkedPin_OwningNodeClass",  PinOwningNodeClass}, {"LinkedPin_OwningNodeType",  PinOwningNodeType}});	//
-					}else
-					{
-						jsonLinkedToArray.push_back({{"LinkedPin_Name", PinName}});
+					case EGPD_Input:
+						dataLinkedPin["LinkedPin_Direction"] = "EGPD_Input";
+						break;
+					case EGPD_Output:
+						dataLinkedPin["LinkedPin_Direction"] = "EGPD_Output";
+						break;
+					case EGPD_MAX:
+						dataLinkedPin["LinkedPin_Direction"] = "EGPD_MAX";
+						break;;	
 					}
-					
+					jsonLinkedToArray.push_back(dataLinkedPin);
 					// const char* k = jsonLinkedToArray.dump(4, ' ').c_str();
 						// FString TextPath = FPaths::ProjectDir() + TEXT("Data/bluescript.json");
       //               	TextPath = FPaths::ConvertRelativePathToFull(TextPath);
