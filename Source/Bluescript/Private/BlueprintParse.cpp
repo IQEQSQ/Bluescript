@@ -224,6 +224,17 @@ basic_config<json_args>  BlueprintParse::ParseGraphs(TArray<UEdGraph*> EdGraphs)
 			JsonNode["NodeName"] = NodeName;
 			JsonNode["NodeTitle"] = NodeTitle;
 			JsonNode["NodeClass"] = NodeClass;
+
+			const auto callFunctionNode = Cast<UK2Node_CallFunction> (Node);
+			if (callFunctionNode != nullptr)
+			{
+				JsonNode["bIsPureFunc"] = callFunctionNode->bIsPureFunc == 1;
+				JsonNode["bIsConstFunc"] = callFunctionNode->bIsConstFunc == 1;
+				JsonNode["bIsFinalFunction"] = callFunctionNode->bIsFinalFunction == 1;
+				JsonNode["bIsInterfaceCall"] = callFunctionNode->bIsInterfaceCall == 1;
+				JsonNode["bIsBeadFunction"] = callFunctionNode->bIsBeadFunction == 1;
+			}
+			
 			AddJsonPropertyString(&JsonNode, "NodeType", GetNodeType(Node));
 			if (K2Node_FunctionEntry)
 			{
